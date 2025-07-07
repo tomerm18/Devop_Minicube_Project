@@ -63,6 +63,11 @@ jobs:
         run: echo "INSTANCE_IP=$(terraform output -raw instance_public_ip)" >> $GITHUB_ENV
         working-directory: ./terraform
 
+      - name: Wait for SSH to be ready
+        run: |
+          echo "Waiting for 2 minutes for the EC2 instance to be ready for SSH..."
+          sleep 120
+
       - name: Deploy to Minikube
         uses: appleboy/ssh-action@master
         with:
@@ -70,9 +75,9 @@ jobs:
           username: ubuntu
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           script: |
-            echo "Waiting for Minikube to be ready..."
-            # **FIXED**: Increased sleep time to allow the server to initialize
-            sleep 180
+            echo "Connected to instance. Waiting for Minikube to stabilize..."
+            sleep 60
+            echo "Deploying Kubernetes manifests..."
             sed -i 's|yourdockerhubusername|${{ secrets.DOCKERHUB_USERNAME }}|g' k8s/deployment.yaml
             sudo -u ubuntu kubectl apply -f k8s/deployment.yaml
             sudo -u ubuntu kubectl apply -f k8s/service.yaml
