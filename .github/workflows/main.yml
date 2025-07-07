@@ -6,34 +6,34 @@ on:
       - main
 
 jobs:
-  # build-and-push-docker:
-  #   name: Build and Push Docker Image
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v3
+  build-and-push-docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-  #     - name: Login to Docker Hub
-  #       uses: docker/login-action@v2
-  #       with:
-  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  #     - name: Build and push Docker image
-  #       uses: docker/build-push-action@v4
-  #       with:
-  #         context: .
-  #         file: ./Dockerfile
-  #         push: true
-  #         tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-devops-app:latest
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-devops-app:latest
 
   deploy-to-aws:
     name: Provision and Deploy to AWS
     runs-on: ubuntu-latest
-    # needs: build-and-push-docker
+    needs: build-and-push-docker
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -54,36 +54,36 @@ jobs:
         run: terraform init
         working-directory: ./terraform
 
-      # - name: Terraform Apply
-      #   run: terraform apply -auto-approve
-      #   working-directory: ./terraform
-
-      # - name: Get instance IP
-      #   id: get_ip
-      #   run: echo "INSTANCE_IP=$(terraform output -raw instance_public_ip)" >> $GITHUB_ENV
-      #   working-directory: ./terraform
-
-      # - name: Wait for SSH to be ready
-      #   run: |
-      #     echo "Waiting for 2 minutes for the EC2 instance to be ready for SSH..."
-      #     sleep 120
-
-      # Destroy the AWS infrastructure
-      - name: Destroy AWS Infrastructure
-        run: terraform destroy -auto-approve
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
         working-directory: ./terraform
 
-      # - name: Deploy to Minikube
-      #   uses: appleboy/ssh-action@master
-      #   with:
-      #     host: ${{ env.INSTANCE_IP }}
-      #     username: ubuntu
-      #     key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
-      #     script: |
-      #       echo "Connected to instance. Waiting for Minikube to stabilize..."
-      #       sleep 60
-      #       echo "Deploying Kubernetes manifests..."
-      #       sed -i 's|yourdockerhubusername|${{ secrets.DOCKERHUB_USERNAME }}|g' k8s/deployment.yaml
-      #       sudo -u ubuntu kubectl apply -f k8s/deployment.yaml
-      #       sudo -u ubuntu kubectl apply -f k8s/service.yaml
-      #       echo "Deployment successful!"
+      - name: Get instance IP
+        id: get_ip
+        run: echo "INSTANCE_IP=$(terraform output -raw instance_public_ip)" >> $GITHUB_ENV
+        working-directory: ./terraform
+
+      - name: Wait for SSH to be ready
+        run: |
+          echo "Waiting for 2 minutes for the EC2 instance to be ready for SSH..."
+          sleep 120
+      
+      - name: Update deployment file on runner
+        run: sed -i 's|yourdockerhubusername|${{ secrets.DOCKERHUB_USERNAME }}|g' k8s/deployment.yaml
+
+      - name: Deploy to Minikube
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.INSTANCE_IP }}
+          username: ubuntu
+          key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
+          script: |
+            echo "Connected to instance. Waiting for Minikube to stabilize..."
+            sleep 60
+            echo "Applying Kubernetes manifests..."
+            sudo -u ubuntu kubectl apply -f - <<EOF
+            ${{ tojson(fromjson(yamldecode(file('k8s/service.yaml')))) }}
+            ---
+            ${{ tojson(fromjson(yamldecode(file('k8s/deployment.yaml')))) }}
+            EOF
+            echo "Deployment successful!"
