@@ -48,7 +48,6 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          # **FIXED**: Disable the wrapper to prevent extra logging output
           terraform_wrapper: false
 
       - name: Terraform Init
@@ -72,7 +71,8 @@ jobs:
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           script: |
             echo "Waiting for Minikube to be ready..."
-            sleep 90
+            # **FIXED**: Increased sleep time to allow the server to initialize
+            sleep 180
             sed -i 's|yourdockerhubusername|${{ secrets.DOCKERHUB_USERNAME }}|g' k8s/deployment.yaml
             sudo -u ubuntu kubectl apply -f k8s/deployment.yaml
             sudo -u ubuntu kubectl apply -f k8s/service.yaml
