@@ -1,9 +1,9 @@
 name: Deploy to Minikube on AWS
 
-on:
-  push:
-    branches:
-      - main
+# on:
+#   push:
+#     branches:
+#       - main
 
 jobs:
   build-and-push-docker:
