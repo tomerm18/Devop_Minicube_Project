@@ -84,7 +84,7 @@ resource "aws_security_group" "minikube_sg" {
 # Create an EC2 instance to run Minikube
 resource "aws_instance" "minikube_server" {
   instance_type          = "t3.medium" # Minikube needs at least 2 CPUs and 2GB of memory
-  ami                    = "ami-0c55b159cbfafe1f0" # Ubuntu 20.04 LTS in us-east-1. Change if you use a different region.
+  ami                    = "ami-020cba7c55df1f615" # Ubuntu 20.04 LTS in us-east-1. Change if you use a different region.
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.minikube_sg.id]
   key_name               = "devops-project-key" # Name of the key pair
