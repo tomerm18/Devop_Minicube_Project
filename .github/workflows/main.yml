@@ -1,9 +1,9 @@
 name: Deploy to Minikube on AWS
 
-on:
-  push:
-    branches:
-      - main
+# on:
+#   push:
+#     branches:
+#       - main
 
 jobs:
   build-and-push-docker:
@@ -87,3 +87,24 @@ jobs:
             echo "${{ env.SERVICE_YAML }}" | base64 -d | sudo -u ubuntu kubectl apply -f -
             echo "${{ env.DEPLOYMENT_YAML }}" | base64 -d | sudo -u ubuntu kubectl apply -f -
             echo "Deployment successful!"
+
+      - name: Debug Server State
+        if: always() # This step will run even if the previous steps fail
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.INSTANCE_IP }}
+          username: ubuntu
+          key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
+          script: |
+            echo "--- DEBUGGING SERVER STATE ---"
+            echo "--- Docker Status ---"
+            docker ps -a
+            echo "--- Minikube Status ---"
+            sudo -u ubuntu minikube status
+            echo "--- Kubernetes Resources ---"
+            sudo -u ubuntu kubectl get all --all-namespaces
+            echo "--- Network Listeners ---"
+            sudo netstat -tulpn | grep LISTEN
+            echo "--- Testing NodePort Locally ---"
+            curl -v http://localhost:30080
+            echo "--- End of Debugging ---"
