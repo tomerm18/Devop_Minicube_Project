@@ -68,8 +68,11 @@ jobs:
           echo "Waiting for 2 minutes for the EC2 instance to be ready for SSH..."
           sleep 120
       
-      - name: Update deployment file on runner
-        run: sed -i 's|yourdockerhubusername|${{ secrets.DOCKERHUB_USERNAME }}|g' k8s/deployment.yaml
+      - name: Prepare K8s manifests
+        run: |
+          sed -i 's|yourdockerhubusername|${{ secrets.DOCKERHUB_USERNAME }}|g' k8s/deployment.yaml
+          echo "DEPLOYMENT_YAML=$(cat k8s/deployment.yaml | base64 -w 0)" >> $GITHUB_ENV
+          echo "SERVICE_YAML=$(cat k8s/service.yaml | base64 -w 0)" >> $GITHUB_ENV
 
       - name: Deploy to Minikube
         uses: appleboy/ssh-action@master
@@ -81,9 +84,6 @@ jobs:
             echo "Connected to instance. Waiting for Minikube to stabilize..."
             sleep 60
             echo "Applying Kubernetes manifests..."
-            sudo -u ubuntu kubectl apply -f - <<EOF
-            ${{ tojson(fromjson(yamldecode(file('k8s/service.yaml')))) }}
-            ---
-            ${{ tojson(fromjson(yamldecode(file('k8s/deployment.yaml')))) }}
-            EOF
+            echo "${{ env.SERVICE_YAML }}" | base64 -d | sudo -u ubuntu kubectl apply -f -
+            echo "${{ env.DEPLOYMENT_YAML }}" | base64 -d | sudo -u ubuntu kubectl apply -f -
             echo "Deployment successful!"
