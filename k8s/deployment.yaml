@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-webapp-deployment
+spec:
+  replicas: 2 # Run 2 pods for high availability
+  selector:
+    matchLabels:
+      app: my-webapp
+  template:
+    metadata:
+      labels:
+        app: my-webapp
+    spec:
+      containers:
+      - name: my-webapp-container
+        # IMPORTANT: This will be replaced by the CI/CD pipeline
+        image: yourdockerhubusername/my-devops-app:latest
+        ports:
+        - containerPort: 80

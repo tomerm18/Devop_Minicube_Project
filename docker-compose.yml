@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  webapp:
+    # Tells Docker Compose to build the image from the Dockerfile in the current directory
+    build: .
+    container_name: my-devops-app-local
+    ports:
+      # Maps port 8080 on your local machine to port 80 in the container
+      - "8080:80"
