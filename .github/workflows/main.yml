@@ -97,6 +97,8 @@ jobs:
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           script: |
             echo "--- DEBUGGING SERVER STATE ---"
+            echo "--- Sleep for 60 seconds ---"
+            sleep 60
             echo "--- Docker Status ---"
             docker ps -a
             echo "--- Minikube Status ---"
