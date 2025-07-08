@@ -2,8 +2,23 @@ provider "aws" {
   region = "us-east-1" # You can change this to your preferred region
 }
 
+# **FIXED**: Dynamically find the latest Ubuntu 22.04 AMI
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical's AWS account ID
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 # Use a data source to fetch an EXISTING key pair
-# This prevents errors if the key already exists in AWS.
 data "aws_key_pair" "deployer_key" {
   key_name = "devops-project-key"
 }
@@ -87,7 +102,7 @@ resource "aws_security_group" "minikube_sg" {
 # Create an EC2 instance
 resource "aws_instance" "minikube_server" {
   instance_type          = "t3.medium"
-  ami                    = "ami-020cba7c55df1f615" # Ubuntu 22.04 LTS in us-east-1
+  ami                    = data.aws_ami.ubuntu.id # Use the dynamically found AMI
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.minikube_sg.id]
   key_name               = data.aws_key_pair.deployer_key.key_name
@@ -106,6 +121,8 @@ resource "aws_instance" "minikube_server" {
               curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
               install minikube /usr/local/bin/
               sudo -u ubuntu minikube start --driver=docker --force
+              sudo -u ubuntu minikube addons disable storage-provisioner
+              nohup sudo -u ubuntu minikube tunnel --alsologtostderr > /tmp/tunnel.log 2>&1 &
               EOF
 
   tags = {
