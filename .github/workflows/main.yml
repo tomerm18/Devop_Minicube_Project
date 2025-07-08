@@ -74,31 +74,22 @@ jobs:
           echo "DEPLOYMENT_YAML=$(cat k8s/deployment.yaml | base64 -w 0)" >> $GITHUB_ENV
           echo "SERVICE_YAML=$(cat k8s/service.yaml | base64 -w 0)" >> $GITHUB_ENV
 
-      - name: Deploy to Minikube
+      - name: Deploy and Start Tunnel
         uses: appleboy/ssh-action@master
         with:
           host: ${{ env.INSTANCE_IP }}
           username: ubuntu
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           script: |
-            echo "Connected to instance. Waiting for Minikube to stabilize..."
-            sleep 60
             echo "Applying Kubernetes manifests..."
             echo "${{ env.SERVICE_YAML }}" | base64 -d | sudo -u ubuntu kubectl apply -f -
             echo "${{ env.DEPLOYMENT_YAML }}" | base64 -d | sudo -u ubuntu kubectl apply -f -
-            echo "Deployment successful!"
-
-      - name: Start Minikube Tunnel
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ env.INSTANCE_IP }}
-          username: ubuntu
-          key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
-          script: |
+            
+            echo "Waiting for deployment to be ready..."
+            sudo -u ubuntu kubectl rollout status deployment/my-webapp-deployment --timeout=2m
+            
             echo "Starting Minikube tunnel in the background..."
-            # Disable the problematic addon
             sudo -u ubuntu minikube addons disable storage-provisioner
-            # Run the tunnel in the background
             nohup sudo -u ubuntu minikube tunnel --alsologtostderr > /tmp/tunnel.log 2>&1 &
             sleep 10 # Give the tunnel a moment to start
             echo "Tunnel process started."
