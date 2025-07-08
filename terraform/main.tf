@@ -87,7 +87,7 @@ resource "aws_security_group" "minikube_sg" {
 # Create an EC2 instance
 resource "aws_instance" "minikube_server" {
   instance_type          = "t3.medium"
-  ami                    = "ami-0c5208502f3df9b01" # Ubuntu 22.04 LTS in us-east-1
+  ami                    = "ami-020cba7c55df1f615" # Ubuntu 22.04 LTS in us-east-1
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.minikube_sg.id]
   key_name               = data.aws_key_pair.deployer_key.key_name
