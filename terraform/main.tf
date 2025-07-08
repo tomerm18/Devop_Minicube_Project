@@ -112,7 +112,8 @@ resource "aws_instance" "minikube_server" {
               export DEBIAN_FRONTEND=noninteractive
               apt-get update -y
               apt-get upgrade -y
-              apt-get install -y docker.io
+              # Install net-tools for debugging with netstat
+              apt-get install -y docker.io net-tools
               systemctl start docker
               systemctl enable docker
               usermod -aG docker ubuntu
@@ -120,9 +121,8 @@ resource "aws_instance" "minikube_server" {
               install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
               curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
               install minikube /usr/local/bin/
+              # Start minikube, but do not run the tunnel here
               sudo -u ubuntu minikube start --driver=docker --force
-              sudo -u ubuntu minikube addons disable storage-provisioner
-              nohup sudo -u ubuntu minikube tunnel --alsologtostderr > /tmp/tunnel.log 2>&1 &
               EOF
 
   tags = {

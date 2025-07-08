@@ -88,6 +88,21 @@ jobs:
             echo "${{ env.DEPLOYMENT_YAML }}" | base64 -d | sudo -u ubuntu kubectl apply -f -
             echo "Deployment successful!"
 
+      - name: Start Minikube Tunnel
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.INSTANCE_IP }}
+          username: ubuntu
+          key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
+          script: |
+            echo "Starting Minikube tunnel in the background..."
+            # Disable the problematic addon
+            sudo -u ubuntu minikube addons disable storage-provisioner
+            # Run the tunnel in the background
+            nohup sudo -u ubuntu minikube tunnel --alsologtostderr > /tmp/tunnel.log 2>&1 &
+            sleep 10 # Give the tunnel a moment to start
+            echo "Tunnel process started."
+
       - name: Debug Server State
         if: always() # This step will run even if the previous steps fail
         uses: appleboy/ssh-action@master
@@ -107,7 +122,8 @@ jobs:
             sudo -u ubuntu kubectl get all --all-namespaces
             echo "--- Network Listeners ---"
             sudo netstat -tulpn | grep LISTEN
+            echo "--- Minikube Tunnel Log ---"
+            cat /tmp/tunnel.log
             echo "--- Testing NodePort Locally ---"
             curl -v http://localhost:30080
             echo "--- End of Debugging ---"
-            
